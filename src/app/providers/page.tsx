@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { PawPrint } from "lucide-react";
 import { Header } from "@/components/header";
 import { ProviderCard } from "@/components/provider-card";
@@ -30,15 +32,44 @@ async function getProviders(category?: string, city?: string): Promise<Provider[
     .filter((p) => p.business_status !== "CLOSED_PERMANENTLY");
 }
 
-/** Get distinct city names from all providers for the filter dropdown. */
-async function getAvailableCities(): Promise<string[]> {
+export interface CityOption {
+  name: string;
+  count: number; // 0 = no providers yet
+}
+
+/** Merge Firestore cities (with provider counts) and all regencies from static data. */
+async function getAllCities(): Promise<CityOption[]> {
+  // Cities that have providers (with count)
   const snapshot = await adminDb.collection("providers").select("area_city").get();
-  const citySet = new Set<string>();
+  const cityCount = new Map<string, number>();
   snapshot.docs.forEach((doc) => {
     const city = doc.data().area_city as string | undefined;
-    if (city) citySet.add(city);
+    if (city) cityCount.set(city, (cityCount.get(city) || 0) + 1);
   });
-  return Array.from(citySet).sort((a, b) => a.localeCompare(b));
+
+  // All regencies from static JSON
+  let allRegencies: string[] = [];
+  try {
+    const filePath = join(process.cwd(), "public", "data", "wilayah", "all-regencies.json");
+    allRegencies = JSON.parse(readFileSync(filePath, "utf8"));
+  } catch {
+    // fallback: just use Firestore cities
+  }
+
+  // Merge: Firestore cities first (sorted by count desc), then remaining regencies (sorted alphabetically)
+  const seen = new Set<string>();
+  const withProviders: CityOption[] = [];
+  for (const [name, count] of cityCount) {
+    withProviders.push({ name, count });
+    seen.add(name);
+  }
+  withProviders.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+  const withoutProviders: CityOption[] = allRegencies
+    .filter((name) => !seen.has(name))
+    .map((name) => ({ name, count: 0 }));
+
+  return [...withProviders, ...withoutProviders];
 }
 
 interface ProvidersPageProps {
@@ -53,14 +84,14 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
   const hasUserLocation = userLat !== null && userLng !== null && !isNaN(userLat) && !isNaN(userLng);
 
   let providers: Provider[] = [];
-  let cities: string[] = [];
+  let cities: CityOption[] = [];
   let distanceMap: Map<string, number> = new Map();
   let error = "";
 
   try {
     [providers, cities] = await Promise.all([
       getProviders(category, city),
-      getAvailableCities(),
+      getAllCities(),
     ]);
 
     // Calculate distances and sort by nearest if user location is available

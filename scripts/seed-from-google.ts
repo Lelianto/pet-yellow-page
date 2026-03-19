@@ -1,21 +1,18 @@
 /**
  * Seed Firestore with pet service providers from Google Places API.
  *
- * Phase 1: Search places by text query
- * Phase 2: Fetch detailed info per place (reviews, types, editorial_summary)
- * Phase 3: Extract services from reviews + name + types
- *
  * Usage:
- *   GOOGLE_MAPS_API_KEY=xxx FIREBASE_ADMIN_PROJECT_ID=xxx \
- *   FIREBASE_ADMIN_CLIENT_EMAIL=xxx FIREBASE_ADMIN_PRIVATE_KEY=xxx \
- *   npx tsx scripts/seed-from-google.ts [area]
- *
- * Default area: "Bandung" — pass a different city/area as the first argument.
+ *   npx tsx scripts/seed-from-google.ts [area]             # single city (default: Bandung)
+ *   npx tsx scripts/seed-from-google.ts --all              # all 514 regencies
+ *   npx tsx scripts/seed-from-google.ts --capitals         # 35 provincial capitals only
+ *   npx tsx scripts/seed-from-google.ts --capitals --from "Kota Surabaya"  # resume
  */
 
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
+import { readFileSync } from "fs";
+import { join } from "path";
 import { initializeApp, cert, type ServiceAccount } from "firebase-admin/app";
 import { getFirestore, GeoPoint, Timestamp } from "firebase-admin/firestore";
 
@@ -36,15 +33,13 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-const AREA = process.argv[2] || "Bandung";
-
-const SEARCH_QUERIES = [
-  `pet grooming ${AREA}`,
-  `dokter hewan ${AREA}`,
-  `pet hotel ${AREA}`,
-  `pet shop ${AREA}`,
-  `pet sitter ${AREA}`,
-  `jasa titip hewan peliharaan ${AREA}`,
+const SEARCH_TEMPLATES = [
+  "pet grooming",
+  "dokter hewan",
+  "pet hotel",
+  "pet shop",
+  "pet sitter",
+  "jasa titip hewan peliharaan",
 ];
 
 const QUERY_TO_CATEGORY: Record<string, string> = {
@@ -155,22 +150,16 @@ function detectServices(
   const found = new Set<string>();
 
   for (const svc of SERVICE_DEFS) {
-    // Check keywords in combined text
     if (svc.keywords.some((kw) => allText.includes(kw))) {
       found.add(svc.id);
       continue;
     }
-    // Check Google types
     if (svc.googleTypes?.some((t) => types.includes(t))) {
       found.add(svc.id);
     }
   }
 
   return Array.from(found);
-}
-
-function detectHomeService(services: string[]): boolean {
-  return services.includes("home_service");
 }
 
 // ── Google Places API (New) ─────────────────────────────────────────
@@ -208,7 +197,6 @@ interface PlaceResult {
   reviews?: Review[];
 }
 
-// Phase 1: Text search to get place IDs
 async function searchPlaces(query: string): Promise<PlaceResult[]> {
   const url = "https://places.googleapis.com/v1/places:searchText";
 
@@ -227,7 +215,7 @@ async function searchPlaces(query: string): Promise<PlaceResult[]> {
   });
 
   if (!res.ok) {
-    console.error(`Places API error for "${query}": ${res.status} ${await res.text()}`);
+    console.error(`    Places API error for "${query}": ${res.status} ${await res.text()}`);
     return [];
   }
 
@@ -235,7 +223,6 @@ async function searchPlaces(query: string): Promise<PlaceResult[]> {
   return data.places || [];
 }
 
-// Phase 2: Fetch full details per place
 async function getPlaceDetails(placeId: string): Promise<PlaceResult | null> {
   const url = `https://places.googleapis.com/v1/places/${placeId}`;
 
@@ -265,7 +252,7 @@ async function getPlaceDetails(placeId: string): Promise<PlaceResult | null> {
   });
 
   if (!res.ok) {
-    console.error(`  Place Details error for ${placeId}: ${res.status}`);
+    console.error(`    Place Details error for ${placeId}: ${res.status}`);
     return null;
   }
 
@@ -296,18 +283,13 @@ function formatOpeningHours(periods?: OpeningHoursPeriod[]) {
     }));
 }
 
-// ── Main ────────────────────────────────────────────────────────────
-async function main() {
-  console.log(`Seeding providers for area: ${AREA}`);
-  console.log(`Phase 1: Searching places...\n`);
-
-  // Phase 1: Collect all unique place IDs
+// ── Seed one area ───────────────────────────────────────────────────
+async function seedArea(area: string, areaCity: string): Promise<number> {
   const placeIdToCategory = new Map<string, string>();
 
-  for (const query of SEARCH_QUERIES) {
-    console.log(`Searching: "${query}"...`);
+  for (const template of SEARCH_TEMPLATES) {
+    const query = `${template} ${area}`;
     const places = await searchPlaces(query);
-    console.log(`  Found ${places.length} results`);
 
     const category = inferCategory(query);
     for (const place of places) {
@@ -315,12 +297,14 @@ async function main() {
         placeIdToCategory.set(place.id, category);
       }
     }
+
+    // Small delay between searches
+    await new Promise((r) => setTimeout(r, 50));
   }
 
-  console.log(`\nPhase 2: Fetching details for ${placeIdToCategory.size} unique places...\n`);
+  if (placeIdToCategory.size === 0) return 0;
 
-  // Phase 2 & 3: Fetch details and extract services
-  let totalSaved = 0;
+  let saved = 0;
 
   for (const [placeId, category] of placeIdToCategory) {
     const place = await getPlaceDetails(placeId);
@@ -332,9 +316,8 @@ async function main() {
       .map((r) => r.text?.text || "")
       .filter(Boolean);
 
-    // Phase 3: Extract services
     const services = detectServices(name, types, reviewTexts, place.editorialSummary?.text);
-    const isHomeService = detectHomeService(services);
+    const isHomeService = services.includes("home_service");
 
     const now = Timestamp.now();
     const doc: Record<string, unknown> = {
@@ -354,6 +337,7 @@ async function main() {
         place.location?.latitude || 0,
         place.location?.longitude || 0
       ),
+      area_city: areaCity,
       created_at: now,
       updated_at: now,
     };
@@ -380,7 +364,6 @@ async function main() {
       doc.business_status = place.businessStatus;
     }
 
-    // Store top reviews (max 5)
     if (place.reviews && place.reviews.length > 0) {
       doc.reviews = place.reviews.slice(0, 5).map((r) => ({
         author: r.authorAttribution?.displayName || "Anonim",
@@ -398,15 +381,69 @@ async function main() {
       .map((d) => `${d!.emoji} ${d!.label}`)
       .join(", ");
 
-    console.log(`  ✓ ${name} (${category})`);
-    if (svcLabels) console.log(`    Layanan: ${svcLabels}`);
-    totalSaved++;
+    console.log(`    ✓ ${name} (${category})${svcLabels ? ` — ${svcLabels}` : ""}`);
+    saved++;
 
-    // Small delay to avoid rate limiting
     await new Promise((r) => setTimeout(r, 100));
   }
 
-  console.log(`\nDone! Saved ${totalSaved} providers to Firestore.`);
+  return saved;
+}
+
+// ── Main ────────────────────────────────────────────────────────────
+async function main() {
+  const args = process.argv.slice(2);
+  const isAll = args.includes("--all");
+  const isCapitals = args.includes("--capitals");
+  const fromIdx = args.indexOf("--from");
+  const fromCity = fromIdx !== -1 ? args[fromIdx + 1] : null;
+
+  if (isAll || isCapitals) {
+    // Load city list
+    const filePath = isCapitals
+      ? join(process.cwd(), "scripts", "capital-cities.json")
+      : join(process.cwd(), "public", "data", "wilayah", "all-regencies.json");
+    const allRegencies: string[] = JSON.parse(readFileSync(filePath, "utf8"));
+
+    let startIdx = 0;
+    if (fromCity) {
+      startIdx = allRegencies.findIndex((r) => r === fromCity);
+      if (startIdx === -1) {
+        console.error(`City "${fromCity}" not found in all-regencies.json`);
+        process.exit(1);
+      }
+      console.log(`Resuming from: ${fromCity} (index ${startIdx}/${allRegencies.length})\n`);
+    }
+
+    const label = isCapitals ? "capital cities" : "regencies";
+    console.log(`Seeding ${allRegencies.length} ${label} (starting from index ${startIdx})...\n`);
+
+    let grandTotal = 0;
+
+    for (let i = startIdx; i < allRegencies.length; i++) {
+      const regency = allRegencies[i];
+      // Strip "Kabupaten "/"Kota " prefix for search query (better Google results)
+      const searchName = regency.replace(/^(Kabupaten|Kota)\s+/i, "");
+
+      console.log(`[${i + 1}/${allRegencies.length}] ${regency} (searching "${searchName}")...`);
+
+      const saved = await seedArea(searchName, regency);
+      grandTotal += saved;
+
+      console.log(`  → ${saved} providers saved\n`);
+
+      // Delay between cities to stay within rate limits
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
+    console.log(`\nAll done! Total: ${grandTotal} providers across ${allRegencies.length} ${label}.`);
+  } else {
+    // Single area mode
+    const area = args[0] || "Bandung";
+    console.log(`Seeding providers for area: ${area}\n`);
+    const saved = await seedArea(area, area);
+    console.log(`\nDone! Saved ${saved} providers to Firestore.`);
+  }
 }
 
 main().catch((err) => {

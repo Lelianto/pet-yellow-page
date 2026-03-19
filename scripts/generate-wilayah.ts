@@ -54,6 +54,13 @@ async function main() {
   }
   console.log(`  regencies/ (${regFileCount} files, ${allRegencies.length} total items)`);
 
+  // 2b. Flat list of all regency names for city filter
+  const allRegencyNames = allRegencies
+    .map((r) => titleCase(r.name))
+    .sort((a, b) => a.localeCompare(b));
+  writeFileSync(join(OUT, "all-regencies.json"), JSON.stringify(allRegencyNames));
+  console.log(`  all-regencies.json (${allRegencyNames.length} items)`);
+
   // 3. Districts grouped by regency
   const allDistricts = await getDistricts();
   const distByReg = new Map<string, { id: string; name: string }[]>();
