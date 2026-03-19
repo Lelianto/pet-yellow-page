@@ -5,6 +5,7 @@
  *   npx tsx scripts/seed-from-google.ts [area]             # single city (default: Bandung)
  *   npx tsx scripts/seed-from-google.ts --all              # all 514 regencies
  *   npx tsx scripts/seed-from-google.ts --capitals         # 35 provincial capitals only
+ *   npx tsx scripts/seed-from-google.ts --cities scripts/top-40-cities.json  # custom city list
  *   npx tsx scripts/seed-from-google.ts --capitals --from "Kota Surabaya"  # resume
  */
 
@@ -395,14 +396,21 @@ async function main() {
   const args = process.argv.slice(2);
   const isAll = args.includes("--all");
   const isCapitals = args.includes("--capitals");
+  const citiesIdx = args.indexOf("--cities");
+  const customCitiesFile = citiesIdx !== -1 ? args[citiesIdx + 1] : null;
   const fromIdx = args.indexOf("--from");
   const fromCity = fromIdx !== -1 ? args[fromIdx + 1] : null;
 
-  if (isAll || isCapitals) {
+  if (isAll || isCapitals || customCitiesFile) {
     // Load city list
-    const filePath = isCapitals
-      ? join(process.cwd(), "scripts", "capital-cities.json")
-      : join(process.cwd(), "public", "data", "wilayah", "all-regencies.json");
+    let filePath: string;
+    if (customCitiesFile) {
+      filePath = join(process.cwd(), customCitiesFile);
+    } else if (isCapitals) {
+      filePath = join(process.cwd(), "scripts", "capital-cities.json");
+    } else {
+      filePath = join(process.cwd(), "public", "data", "wilayah", "all-regencies.json");
+    }
     const allRegencies: string[] = JSON.parse(readFileSync(filePath, "utf8"));
 
     let startIdx = 0;
@@ -415,7 +423,7 @@ async function main() {
       console.log(`Resuming from: ${fromCity} (index ${startIdx}/${allRegencies.length})\n`);
     }
 
-    const label = isCapitals ? "capital cities" : "regencies";
+    const label = customCitiesFile ? "custom cities" : isCapitals ? "capital cities" : "regencies";
     console.log(`Seeding ${allRegencies.length} ${label} (starting from index ${startIdx})...\n`);
 
     let grandTotal = 0;

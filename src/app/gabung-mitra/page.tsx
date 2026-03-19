@@ -11,6 +11,7 @@ import { AreaSelector, type AreaSelection } from "@/components/area-selector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CATEGORIES, type ProviderCategory } from "@/lib/types";
+import { buildTrialFields } from "@/lib/tiers";
 
 export default function GabungMitraPage() {
   const { user, signInWithGoogle } = useAuth();
@@ -39,6 +40,9 @@ export default function GabungMitraPage() {
 
     setSubmitting(true);
     try {
+      // Self-registered providers get 14-day Growth trial automatically
+      const trialFields = buildTrialFields();
+
       await addDoc(collection(db, "providers"), {
         name,
         category: categories[0],
@@ -59,9 +63,13 @@ export default function GabungMitraPage() {
         claim_status: "approved",
         owner_uid: user.uid,
         claimant_uid: user.uid,
+        ...trialFields,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       });
+
+      // Rebuild homepage cache in background
+      fetch("/api/rebuild-cache", { method: "POST" }).catch(() => {});
 
       setSubmitted(true);
     } catch (err) {

@@ -1,5 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
-import type { Provider, ProviderCategory, ClaimStatus, ProviderSource, OpeningHoursPeriod, ProviderReview } from "@/lib/types";
+import type { Provider, ProviderCategory, ClaimStatus, ProviderSource, OpeningHoursPeriod, ProviderReview, FeaturesEnabled, PaymentSettings } from "@/lib/types";
+import type { ProviderTier } from "@/lib/tiers";
 
 /**
  * Convert a Firestore document snapshot to a Provider object.
@@ -37,10 +38,18 @@ export function docToProvider(doc: { id: string; data: () => Record<string, unkn
     source: (data.source as ProviderSource) || "google_maps",
     claim_proof_url: data.claim_proof_url as string | undefined,
     claim_proof_text: data.claim_proof_text as string | undefined,
+    payment_settings: data.payment_settings as PaymentSettings | undefined,
     area_province: data.area_province as string | undefined,
     area_city: data.area_city as string | undefined,
     area_district: data.area_district as string | undefined,
     area_village: data.area_village as string | undefined,
+    // Tier fields (defaults for providers seeded before tier system)
+    tier: (data.tier as ProviderTier) || "basic",
+    is_premium: (data.is_premium as boolean) || false,
+    premium_until: (data.premium_until as { toDate?: () => Date })?.toDate?.() || null,
+    trial_used: (data.trial_used as boolean) || false,
+    tier_rank: (data.tier_rank as number) || 0,
+    features_enabled: (data.features_enabled as FeaturesEnabled) || { booking: false, payments: false, crm: false },
     created_at: (data.created_at as { toDate?: () => Date })?.toDate?.() || new Date(),
     updated_at: (data.updated_at as { toDate?: () => Date })?.toDate?.() || new Date(),
   };
@@ -172,4 +181,44 @@ export async function getTopReviews(limit: number = 8): Promise<TopReview[]> {
 
   reviews.sort(() => Math.random() - 0.5);
   return reviews.slice(0, limit);
+}
+
+/** Get providers filtered by category and city, sorted by rating. */
+export async function getProvidersByCategoryAndCity(
+  category: ProviderCategory,
+  city: string,
+): Promise<Provider[]> {
+  const snapshot = await adminDb
+    .collection("providers")
+    .where("category", "==", category)
+    .where("area_city", "==", city)
+    .orderBy("rating", "desc")
+    .limit(50)
+    .get();
+
+  return snapshot.docs
+    .map(docToProvider)
+    .filter((p) => p.business_status !== "CLOSED_PERMANENTLY");
+}
+
+/** Get all unique category+city combinations for sitemap generation. */
+export async function getAllCategoryCityCombinations(): Promise<{ category: string; city: string }[]> {
+  const snapshot = await adminDb.collection("providers").select("category", "area_city").get();
+  const combos = new Set<string>();
+  const results: { category: string; city: string }[] = [];
+
+  snapshot.docs.forEach((doc) => {
+    const data = doc.data();
+    const cat = data.category as string | undefined;
+    const city = data.area_city as string | undefined;
+    if (cat && city) {
+      const key = `${cat}|${city}`;
+      if (!combos.has(key)) {
+        combos.add(key);
+        results.push({ category: cat, city });
+      }
+    }
+  });
+
+  return results;
 }

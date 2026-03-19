@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
+import { buildTrialFields } from "@/lib/tiers";
 
 interface AdminApproveButtonProps {
   providerId: string;
@@ -27,11 +28,21 @@ export function AdminApproveButton({ providerId, claimantUid }: AdminApproveButt
         if (claimantUid) {
           updates.owner_uid = claimantUid;
         }
+        // Start 14-day Growth trial
+        const trial = buildTrialFields();
+        Object.assign(updates, {
+          ...trial,
+          premium_until: Timestamp.fromDate(trial.premium_until),
+        });
       } else {
         updates.claim_status = "rejected";
       }
 
       await updateDoc(doc(db, "providers", providerId), updates);
+
+      // Rebuild homepage cache in background
+      fetch("/api/rebuild-cache", { method: "POST" }).catch(() => {});
+
       setStatus(action === "approve" ? "approved" : "rejected");
     } catch (err) {
       console.error("Admin action error:", err);

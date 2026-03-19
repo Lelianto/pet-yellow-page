@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://bulubuluid.vercel.app
+
+# Sitemaps
+Sitemap: https://bulubuluid.vercel.app/sitemap.xml

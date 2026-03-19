@@ -24,6 +24,14 @@ src/
 │   ├── admin/
 │   │   └── pending-claims/
 │   │       └── page.tsx        # Admin dashboard for approvals
+│   ├── dashboard/
+│   │   ├── layout.tsx          # Dashboard layout (Header + container)
+│   │   ├── billing/
+│   │   │   └── page.tsx        # Subscription & billing page
+│   │   ├── bookings/
+│   │   │   └── page.tsx        # Booking management (provider side)
+│   │   └── payment-settings/
+│   │       └── page.tsx        # Bank/QRIS setup (Business tier)
 │   ├── providers/
 │   │   └── page.tsx            # Listing page with filters + recommend CTA
 │   └── providers/[id]/
@@ -38,14 +46,18 @@ src/
 │   ├── whatsapp-button.tsx     # Direct WA CTA
 │   ├── claim-profile-button.tsx    # Client: claim profile sheet
 │   ├── recommend-service-button.tsx # Client: recommend service sheet
-│   ├── admin-approve-button.tsx    # Client: approve/reject buttons
-│   └── admin-auth-gate.tsx         # Client: admin access check
+│   ├── admin-approve-button.tsx    # Client: approve/reject + trigger trial
+│   ├── admin-auth-gate.tsx         # Client: admin access check
+│   ├── pricing-table.tsx           # 3-tier pricing comparison
+│   ├── feature-guard.tsx           # Premium feature gate with upgrade CTA
+│   └── booking-form.tsx            # Customer booking sheet (Growth+ tier)
 ├── lib/
 │   ├── firebase.ts             # Firebase client SDK init (Firestore, Auth, Storage)
 │   ├── firebase-admin.ts       # Firebase Admin SDK init
 │   ├── auth-context.tsx        # Client: React auth context provider
 │   ├── types.ts                # Firestore document types
-│   ├── providers.ts            # docToProvider converter
+│   ├── tiers.ts                # Tier definitions, feature guards, helpers
+│   ├── providers.ts            # docToProvider converter + queries
 │   └── utils.ts                # Shadcn cn() utility
 scripts/
 └── seed-from-google.ts         # Google Places → Firestore seeder
@@ -54,6 +66,8 @@ firestore.rules                 # Firestore security rules
 
 ## Firestore Collections
 - `providers` — main collection for pet service providers
+- `bookings` — customer bookings linked to providers (Growth+ tier)
+- `closure_reports` — user reports of closed businesses
 - `recommendations` — user-submitted service recommendations
 
 ## Phase 2: Trust & Growth System
@@ -62,6 +76,37 @@ firestore.rules                 # Firestore security rules
 - **Recommend a Service**: Users can recommend services via a bottom sheet modal. Saved to `recommendations` collection.
 - **Admin Dashboard** (`/admin/pending-claims`): Lists pending claims and unverified organic registrations. Admin can approve/reject. Protected by `NEXT_PUBLIC_ADMIN_UIDS` env var.
 - **Badges**: Provider cards/tags show "Terverifikasi" (verified) and "Rekomendasi Warga" (user recommendation) badges.
+
+## Phase 3: Subscription & Tier System
+- **Tiers**: Basic (Rp 0), Growth (Rp 75k/mo), Business (Rp 150k/mo)
+- **Eligibility**: Booking features require `source === 'organic'` OR `claim_status === 'approved'`
+- **Trial**: 14 days of Growth tier for newly authorized providers (on claim approval or self-registration)
+- **Tier fields on Provider doc**: `tier`, `is_premium`, `premium_until`, `trial_used`, `tier_rank`, `features_enabled`
+- **Feature Guards** (`src/components/feature-guard.tsx`): Wraps premium features with upgrade prompt
+  - Booking: Growth+ with active premium
+  - DP/Payments: Business only with active premium
+  - Pet CRM: Business only with active premium
+- **Photo limits**: Basic=3, Growth=20, Business=unlimited
+- **Search ranking**: `tier_rank desc, rating desc` — Business shown first, then Growth, then Basic
+- **Pricing Table** (`src/components/pricing-table.tsx`): Shows 3 tiers with features and CTA
+- **Billing Dashboard** (`/dashboard/billing`): Provider sees current plan, days remaining, upgrade options
+- **Tier Utility** (`src/lib/tiers.ts`): All tier definitions, feature guards, and helper functions
+- **Admin Approve**: Triggers 14-day Growth trial (`buildTrialFields()`)
+- **Self-Registration**: Auto-gets 14-day Growth trial on registration
+
+## Phase 4: Booking & Payment System
+- **Bookings Collection** (`bookings`): Stores customer bookings linked to providers
+- **Booking Flow**:
+  - Growth tier: Customer books → status `pending` → Provider confirms → `confirmed`
+  - Business tier: Customer books + uploads payment proof → status `waiting_payment_verification` → Provider verifies → `confirmed`
+  - Booking form shown on provider detail page only for Growth+ providers with active premium
+- **Payment Settings** (`/dashboard/payment-settings`): Business tier providers set up bank/QRIS info + minimum DP amount
+  - Stored in `provider.payment_settings`: bank_name, account_number, account_holder, qris_url, min_dp_amount
+- **Booking Management** (`/dashboard/bookings`): Provider sees all bookings grouped by status
+  - Payment verification section for Business tier (view proof of transfer image)
+  - Confirm / Reject / Mark Complete actions
+- **Booking Status Flow**: `pending` → `confirmed` → `completed` (Growth) | `waiting_payment_verification` → `confirmed` → `completed` (Business)
+- **Tier Guard**: Booking form + payment step skipped for Basic tier (straight to WhatsApp)
 
 ## Commands
 - `npm run dev` — Start dev server (Turbopack)

@@ -24,7 +24,8 @@ async function getProviders(category?: string, city?: string): Promise<Provider[
     query = query.where("area_city", "==", city);
   }
 
-  query = query.orderBy("rating", "desc").limit(50);
+  // Tier-based ranking: business > growth > basic, then by rating
+  query = query.orderBy("tier_rank", "desc").orderBy("rating", "desc").limit(50);
   const snapshot = await query.get();
 
   return snapshot.docs
@@ -39,13 +40,36 @@ export interface CityOption {
 
 /** Merge Firestore cities (with provider counts) and all regencies from static data. */
 async function getAllCities(): Promise<CityOption[]> {
-  // Cities that have providers (with count)
-  const snapshot = await adminDb.collection("providers").select("area_city").get();
+  // Try cached city counts first (1 read), fall back to full scan
   const cityCount = new Map<string, number>();
-  snapshot.docs.forEach((doc) => {
-    const city = doc.data().area_city as string | undefined;
-    if (city) cityCount.set(city, (cityCount.get(city) || 0) + 1);
-  });
+
+  let usedCache = false;
+  try {
+    const { readHomepageCache } = await import("@/lib/homepage-cache");
+    const cache = await readHomepageCache();
+    if (cache?.topCities) {
+      // Cache has top cities with counts, and full city list
+      // Build count map from topCities + fill rest with count 1
+      for (const tc of cache.topCities) {
+        cityCount.set(tc.name, tc.count);
+      }
+      // For cities not in topCities, set count to 1 (they have providers)
+      for (const city of cache.cities) {
+        if (!cityCount.has(city)) cityCount.set(city, 1);
+      }
+      usedCache = true;
+    }
+  } catch {
+    // Cache not available, fall back
+  }
+
+  if (!usedCache) {
+    const snapshot = await adminDb.collection("providers").select("area_city").get();
+    snapshot.docs.forEach((doc) => {
+      const city = doc.data().area_city as string | undefined;
+      if (city) cityCount.set(city, (cityCount.get(city) || 0) + 1);
+    });
+  }
 
   // All regencies from static JSON
   let allRegencies: string[] = [];

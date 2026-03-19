@@ -1,7 +1,15 @@
+import type { ProviderTier } from "@/lib/tiers";
+
 export type ProviderCategory = "grooming" | "vet" | "hotel" | "petshop" | "sitter";
 
 export type ClaimStatus = "none" | "pending" | "approved" | "rejected";
 export type ProviderSource = "google_maps" | "organic" | "user_recommendation";
+
+export interface FeaturesEnabled {
+  booking: boolean;
+  payments: boolean;
+  crm: boolean;
+}
 
 export interface OpeningHoursPeriod {
   day: number; // 0=Sunday, 6=Saturday
@@ -51,6 +59,15 @@ export interface Provider {
   area_city?: string;
   area_district?: string;
   area_village?: string;
+  // Payment settings (Business tier)
+  payment_settings?: PaymentSettings;
+  // Tier / subscription fields
+  tier: ProviderTier;
+  is_premium: boolean;
+  premium_until?: Date | null;
+  trial_used: boolean;
+  tier_rank: number;
+  features_enabled: FeaturesEnabled;
   created_at: Date;
   updated_at: Date;
 }
@@ -80,6 +97,47 @@ export const CATEGORIES: { value: ProviderCategory; label: string; emoji: string
   { value: "petshop", label: "Pet Shop", emoji: "🛍️" },
   { value: "sitter", label: "Pet Sitter", emoji: "🐾" },
 ];
+
+// ── Payment & Booking types ──────────────────────────────────────────
+
+export interface PaymentSettings {
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  min_dp_amount: number; // minimum DP in IDR
+  whatsapp_payment: string; // WA number to receive payment proofs
+}
+
+export type BookingStatus =
+  | "pending"                      // Growth tier: waiting provider confirmation (no payment)
+  | "waiting_payment"              // Business tier: waiting customer to send proof via WA
+  | "waiting_payment_verification" // Business tier: customer says they've paid, waiting provider check
+  | "confirmed"                    // Provider confirmed (or verified payment)
+  | "rejected"                     // Provider rejected
+  | "cancelled"                    // Customer cancelled
+  | "completed";                   // Service done
+
+export interface Booking {
+  id: string;
+  booking_code: string; // e.g. "BB-A1B2C3"
+  provider_id: string;
+  provider_name: string;
+  customer_uid: string;
+  customer_name: string;
+  customer_phone: string;
+  service: string;
+  date: string; // "2026-03-25"
+  time: string; // "10:00"
+  notes?: string;
+  status: BookingStatus;
+  // Payment fields (Business tier only)
+  dp_amount?: number; // base DP
+  dp_unique_code?: number; // 1-999 added for verification
+  dp_total?: number; // dp_amount + dp_unique_code = exact transfer amount
+  payment_verified_at?: Date;
+  created_at: Date;
+  updated_at: Date;
+}
 
 export const SERVICES: Record<string, { label: string; emoji: string }> = {
   grooming: { label: "Grooming", emoji: "✂️" },

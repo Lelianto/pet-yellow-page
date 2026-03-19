@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "tsx scripts/generate-wilayah.ts",
+    "prebuild": "tsx scripts/generate-wilayah.ts && tsx scripts/build-homepage-cache.ts",
     "build": "next build",
+    "postbuild": "next-sitemap",
     "generate:wilayah": "tsx scripts/generate-wilayah.ts",
     "start": "next start",
     "lint": "eslint"
@@ -16,9 +17,12 @@
     "clsx": "^2.1.1",
     "firebase": "^12.10.0",
     "firebase-admin": "^13.7.0",
+    "html-to-image": "^1.11.13",
     "idn-area-data": "^3.1.2",
     "lucide-react": "^0.577.0",
     "next": "16.2.0",
+    "next-sitemap": "^4.2.3",
+    "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "shadcn": "^4.0.8",

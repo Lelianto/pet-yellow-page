@@ -7,11 +7,16 @@ import { Header } from "@/components/header";
 import { ProviderTags } from "@/components/provider-tags";
 import { ServiceChips } from "@/components/service-chips";
 import { WhatsAppButton } from "@/components/whatsapp-button";
+import { ShareButton } from "@/components/share-card";
 import { ClaimProfileButton } from "@/components/claim-profile-button";
+import { BookingForm } from "@/components/booking-form";
+import { OwnerDashboardLink } from "@/components/owner-dashboard-link";
 import { ReportClosedButton } from "@/components/report-closed-button";
+import { LocalBusinessJsonLd } from "@/components/json-ld";
 import { adminDb } from "@/lib/firebase-admin";
 import { docToProvider } from "@/lib/providers";
-import { CATEGORIES, type Provider } from "@/lib/types";
+import { CATEGORIES, SERVICES, type Provider } from "@/lib/types";
+import { canUseBooking } from "@/lib/tiers";
 
 const getProvider = cache(async (id: string): Promise<Provider | null> => {
   const doc = await adminDb.collection("providers").doc(id).get();
@@ -48,6 +53,7 @@ export default async function ProviderDetailPage({ params }: ProviderDetailPageP
 
   return (
     <>
+      <LocalBusinessJsonLd provider={provider} />
       <Header />
       <main className="flex-1 bg-cream">
         {/* Photo */}
@@ -244,13 +250,32 @@ export default async function ProviderDetailPage({ params }: ProviderDetailPageP
             </div>
           )}
 
+          {/* Owner dashboard shortcut */}
+          <OwnerDashboardLink ownerUid={provider.owner_uid} />
+
           {/* CTA section */}
           <div className="animate-fade-up stagger-3 space-y-3">
+            {/* Booking button (Growth+ tier with active premium) */}
+            {canUseBooking(provider.tier, provider.is_premium) && (
+              <BookingForm
+                providerId={provider.id}
+                providerName={provider.name}
+                providerWhatsapp={provider.whatsapp_number}
+                tier={provider.tier}
+                isPremium={provider.is_premium}
+                services={provider.services.map((s) => SERVICES[s]?.label || s)}
+                paymentSettings={provider.payment_settings}
+              />
+            )}
+
             <WhatsAppButton
               phone={provider.whatsapp_number}
               providerName={provider.name}
               className="w-full"
             />
+
+            {/* Share Card */}
+            <ShareButton provider={provider} />
 
             {!provider.whatsapp_number && (
               <div className="bg-cream-dark rounded-2xl p-4 text-center">

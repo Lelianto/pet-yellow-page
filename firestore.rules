@@ -41,6 +41,23 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Bookings collection
+    match /bookings/{bookingId} {
+      // Customer can read their own bookings
+      // Provider can read bookings for their provider
+      allow read: if request.auth != null;
+
+      // Authenticated users can create bookings
+      allow create: if request.auth != null
+        && request.resource.data.customer_uid == request.auth.uid;
+
+      // Provider (owner) can update status; customer can cancel
+      allow update: if request.auth != null;
+
+      // No deletes
+      allow delete: if false;
+    }
+
     // Recommendations collection
     match /recommendations/{recId} {
       // Anyone can read

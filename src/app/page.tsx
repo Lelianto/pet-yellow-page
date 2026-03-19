@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // ISR: revalidate every hour
 
 import Link from "next/link";
 import {
@@ -19,6 +19,7 @@ import {
 import { Header } from "@/components/header";
 import { HeroSearchBar } from "@/components/hero-search-bar";
 import { TestimonialCarousel } from "@/components/testimonial-carousel";
+import { readHomepageCache } from "@/lib/homepage-cache";
 import {
   getAvailableCities,
   getAggregateStats,
@@ -129,12 +130,13 @@ const PASTEL_COLORS = [
 ];
 
 export default async function HomePage() {
-  const [cities, stats, topCities, topReviews] = await Promise.all([
-    getAvailableCities(),
-    getAggregateStats(),
-    getTopCities(8),
-    getTopReviews(8),
-  ]);
+  // Try cached data first (1 read), fall back to full scan (4 reads)
+  const cache = await readHomepageCache();
+
+  const cities = cache?.cities ?? await getAvailableCities();
+  const stats = cache?.stats ?? await getAggregateStats();
+  const topCities = cache?.topCities ?? await getTopCities(8);
+  const topReviews = cache?.topReviews ?? await getTopReviews(8);
 
   return (
     <>

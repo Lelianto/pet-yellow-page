@@ -1,11 +1,28 @@
 "use client";
 
-import { LogIn, LogOut, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { LogIn, LogOut, User, LayoutDashboard } from "lucide-react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 
 export function HeaderAuth() {
   const { user, loading, signInWithGoogle, signOut } = useAuth();
+  const [hasProvider, setHasProvider] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setHasProvider(false);
+      return;
+    }
+    const q = query(
+      collection(db, "providers"),
+      where("owner_uid", "==", user.uid)
+    );
+    getDocs(q).then((snap) => setHasProvider(!snap.empty)).catch(() => {});
+  }, [user]);
 
   if (loading) return null;
 
@@ -25,6 +42,15 @@ export function HeaderAuth() {
 
   return (
     <div className="flex items-center gap-2">
+      {hasProvider && (
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-bark-light hover:text-terracotta transition-colors"
+        >
+          <LayoutDashboard className="h-4 w-4" />
+          <span className="hidden md:inline">Dashboard</span>
+        </Link>
+      )}
       <div className="flex items-center gap-1.5">
         {user.photoURL ? (
           // eslint-disable-next-line @next/next/no-img-element
