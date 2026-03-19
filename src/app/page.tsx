@@ -129,14 +129,24 @@ const PASTEL_COLORS = [
   "bg-lavender-light text-lavender",
 ];
 
-export default async function HomePage() {
-  // Try cached data first (1 read), fall back to full scan (4 reads)
-  const cache = await readHomepageCache();
+const FALLBACK_STATS = { totalProviders: 0, totalReviews: 0, totalCities: 0, verifiedProviders: 0 };
 
-  const cities = cache?.cities ?? await getAvailableCities();
-  const stats = cache?.stats ?? await getAggregateStats();
-  const topCities = cache?.topCities ?? await getTopCities(8);
-  const topReviews = cache?.topReviews ?? await getTopReviews(8);
+export default async function HomePage() {
+  // Try cached data first (1 read), fall back to full scan, then fallback defaults
+  let cities: string[] = [];
+  let stats = FALLBACK_STATS;
+  let topCities: { name: string; count: number }[] = [];
+  let topReviews: { author: string; text: string; rating: number; providerName: string; providerCategory: string }[] = [];
+
+  try {
+    const cache = await readHomepageCache();
+    cities = cache?.cities ?? await getAvailableCities();
+    stats = cache?.stats ?? await getAggregateStats();
+    topCities = cache?.topCities ?? await getTopCities(8);
+    topReviews = cache?.topReviews ?? await getTopReviews(8);
+  } catch (err) {
+    console.error("Homepage data fetch error:", err);
+  }
 
   return (
     <>

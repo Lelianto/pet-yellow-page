@@ -135,6 +135,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Fatal:", err);
-  process.exit(1);
+  // Don't fail the build if Firestore quota is exhausted or unavailable
+  // The homepage will use existing cache or show fallback data
+  console.warn("Warning: Could not build homepage cache:", err.message || err);
+  console.warn("Build will continue — homepage will use existing cache if available.");
+  process.exit(0);
 });
