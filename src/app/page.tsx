@@ -129,7 +129,8 @@ const PASTEL_COLORS = [
   "bg-lavender-light text-lavender",
 ];
 
-const FALLBACK_STATS = { totalProviders: 0, totalReviews: 0, totalCities: 0, verifiedProviders: 0 };
+// Last-known stats as fallback when Firestore is unavailable (e.g. quota exhausted)
+const FALLBACK_STATS = { totalProviders: 5294, totalReviews: 802121, totalCities: 129, verifiedProviders: 1 };
 
 export default async function HomePage() {
   // Try cached data first (1 read), fall back to full scan, then fallback defaults
