@@ -1,65 +1,85 @@
-import Image from "next/image";
+import Link from "next/link";
+import { PawPrint, Search, Scissors, Stethoscope, Hotel, ShoppingBag } from "lucide-react";
+import { Header } from "@/components/header";
 
-export default function Home() {
+const HERO_CATEGORIES = [
+  { href: "/providers?category=grooming", icon: Scissors, label: "Grooming", color: "bg-pink-50 text-pink-600 hover:bg-pink-100" },
+  { href: "/providers?category=vet", icon: Stethoscope, label: "Dokter Hewan", color: "bg-blue-50 text-blue-600 hover:bg-blue-100" },
+  { href: "/providers?category=hotel", icon: Hotel, label: "Pet Hotel", color: "bg-purple-50 text-purple-600 hover:bg-purple-100" },
+  { href: "/providers?category=petshop", icon: ShoppingBag, label: "Pet Shop", color: "bg-green-50 text-green-600 hover:bg-green-100" },
+];
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <>
+      <Header />
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="bg-gradient-to-b from-amber-50 to-white px-4 pt-8 pb-12">
+          <div className="max-w-lg mx-auto text-center space-y-4">
+            <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-medium">
+              <PawPrint className="h-4 w-4" />
+              Layanan hewan terpercaya di sekitarmu
+            </div>
+            <h1 className="text-3xl font-bold text-amber-950 leading-tight">
+              Temukan Layanan Terbaik<br />
+              untuk <span className="text-amber-600">Anabulmu</span>
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Grooming, dokter hewan, hotel, dan pet shop terdekat — langsung hubungi via WhatsApp.
+            </p>
+
+            <Link
+              href="/providers"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium h-10 px-6 w-full max-w-xs transition-colors"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+              <Search className="h-4 w-4" />
+              Cari Layanan
+            </Link>
+          </div>
+        </section>
+
+        {/* Category Grid */}
+        <section className="px-4 -mt-6">
+          <div className="max-w-lg mx-auto grid grid-cols-2 gap-3">
+            {HERO_CATEGORIES.map((cat) => (
+              <Link
+                key={cat.label}
+                href={cat.href}
+                className={`flex flex-col items-center gap-2 p-5 rounded-2xl transition-colors ${cat.color}`}
+              >
+                <cat.icon className="h-7 w-7" />
+                <span className="text-sm font-medium">{cat.label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Info */}
+        <section className="px-4 py-12">
+          <div className="max-w-lg mx-auto text-center space-y-2">
+            <h2 className="font-semibold text-amber-900">Kenapa AnabulCare?</h2>
+            <div className="grid grid-cols-1 gap-4 mt-4 text-sm text-muted-foreground">
+              <div className="space-y-1">
+                <p className="font-medium text-amber-800">Lokal & Terpercaya</p>
+                <p>Data dari Google Maps, diverifikasi komunitas.</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-amber-800">Hubungi Langsung</p>
+                <p>Satu tap langsung chat WhatsApp — tanpa ribet.</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-amber-800">Home Service</p>
+                <p>Filter layanan yang bisa datang ke rumahmu.</p>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
-    </div>
+
+      <footer className="border-t border-amber-100 py-4 text-center text-xs text-muted-foreground">
+        AnabulCare &mdash; Sayang Anabul, Sayang Pemiliknya
+      </footer>
+    </>
   );
 }
