@@ -12,7 +12,7 @@ export function WhatsAppButton({ phone, providerName, className, size = "default
   if (!phone) return null;
 
   const message = encodeURIComponent(
-    `Halo ${providerName}, saya menemukan layanan Anda di BuluBulu.id. Saya ingin bertanya tentang layanan yang tersedia.`
+    `Halo ${providerName}, saya menemukan layanan Anda di BuluBulu. Saya ingin bertanya tentang layanan yang tersedia.`
   );
   const href = `https://wa.me/${phone}?text=${message}`;
 

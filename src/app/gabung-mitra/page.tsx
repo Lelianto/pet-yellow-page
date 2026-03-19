@@ -100,7 +100,7 @@ export default function GabungMitraPage() {
               </div>
               <h1 className="font-display font-extrabold text-xl text-bark">Pendaftaran Berhasil!</h1>
               <p className="text-sm text-warm-gray max-w-sm mx-auto">
-                Profil Anda sedang ditinjau tim kami. Setelah diverifikasi, layanan Anda akan muncul di direktori BuluBulu.id.
+                Profil Anda sedang ditinjau tim kami. Setelah diverifikasi, layanan Anda akan muncul di direktori BuluBulu.
               </p>
               <Link
                 href="/providers"

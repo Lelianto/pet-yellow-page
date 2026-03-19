@@ -16,12 +16,12 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "BuluBulu.id — Layanan Hewan Peliharaan Terdekat",
+  title: "BuluBulu — Layanan Hewan Peliharaan Terdekat",
   description:
     "Temukan grooming, dokter hewan, pet hotel, dan pet shop terpercaya di sekitarmu. Hubungi langsung via WhatsApp.",
   keywords: ["pet care", "grooming", "dokter hewan", "pet hotel", "pet shop", "anabul", "kucing", "anjing"],
   openGraph: {
-    title: "BuluBulu.id — Layanan Hewan Peliharaan Terdekat",
+    title: "BuluBulu — Layanan Hewan Peliharaan Terdekat",
     description: "Grooming, vet, hotel & pet shop lokal — satu tap langsung WhatsApp.",
     type: "website",
   },

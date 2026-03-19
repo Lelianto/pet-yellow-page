@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://bulubuluid.vercel.app
+Host: https://bulubulu.biz.id
 
 # Sitemaps
-Sitemap: https://bulubuluid.vercel.app/sitemap.xml
+Sitemap: https://bulubulu.biz.id/sitemap.xml

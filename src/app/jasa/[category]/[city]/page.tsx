@@ -43,12 +43,12 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { category: catSlug, city: citySlug } = await params;
   const category = slugToCategory(catSlug);
-  if (!category) return { title: "Tidak Ditemukan | BuluBulu.id" };
+  if (!category) return { title: "Tidak Ditemukan | BuluBulu" };
 
   const city = decodeCity(citySlug);
   const seo = CATEGORY_SEO[category];
 
-  const title = `10+ ${seo.title} Terpercaya di ${city} - BuluBulu.id`;
+  const title = `10+ ${seo.title} Terpercaya di ${city} - BuluBulu`;
   const description = `Cari jasa ${seo.desc} terbaik di ${city}. Cek rating, lokasi, dan hubungi langsung via WhatsApp. Gratis & Terverifikasi.`;
 
   return {
@@ -59,10 +59,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title,
       description,
       type: "website",
-      url: `https://bulubuluid.vercel.app/jasa/${catSlug}/${citySlug}`,
+      url: `https://bulubulu.biz.id/jasa/${catSlug}/${citySlug}`,
     },
     alternates: {
-      canonical: `https://bulubuluid.vercel.app/jasa/${catSlug}/${citySlug}`,
+      canonical: `https://bulubulu.biz.id/jasa/${catSlug}/${citySlug}`,
     },
   };
 }
@@ -77,7 +77,7 @@ export default async function JasaCategoryCity({ params }: PageProps) {
   const catInfo = CATEGORIES.find((c) => c.value === category);
   const providers = await getProvidersByCategoryAndCity(category, city);
 
-  const pageUrl = `https://bulubuluid.vercel.app/jasa/${catSlug}/${citySlug}`;
+  const pageUrl = `https://bulubulu.biz.id/jasa/${catSlug}/${citySlug}`;
 
   return (
     <>

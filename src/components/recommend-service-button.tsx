@@ -115,7 +115,7 @@ export function RecommendServiceButton({ className, variant = "default" }: Recom
               <CheckCircle className="h-8 w-8 text-sage mx-auto mb-2" />
               <p className="font-display font-bold text-bark">Terima kasih!</p>
               <p className="text-sm text-warm-gray mt-1">
-                Rekomendasi Anda akan segera muncul di direktori BuluBulu.id.
+                Rekomendasi Anda akan segera muncul di direktori BuluBulu.
               </p>
             </div>
           ) : (

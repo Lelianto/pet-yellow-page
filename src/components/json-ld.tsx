@@ -30,7 +30,7 @@ export function LocalBusinessJsonLd({ provider }: { provider: Provider }) {
       addressRegion: provider.area_province || "",
       addressCountry: "ID",
     },
-    url: `https://bulubuluid.vercel.app/providers/${provider.id}`,
+    url: `https://bulubulu.biz.id/providers/${provider.id}`,
   };
 
   if (provider.location.latitude !== 0) {
@@ -101,7 +101,7 @@ export function ItemListJsonLd({ providers, title, url }: {
       item: {
         "@type": "LocalBusiness",
         name: p.name,
-        url: `https://bulubuluid.vercel.app/providers/${p.id}`,
+        url: `https://bulubulu.biz.id/providers/${p.id}`,
         address: p.address,
         ...(p.rating > 0 && {
           aggregateRating: {

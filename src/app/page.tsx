@@ -267,12 +267,12 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Features / Kenapa BuluBulu.id? */}
+        {/* Features / Kenapa BuluBulu? */}
         <section className="px-5 pb-14 md:pb-20">
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="font-display font-extrabold text-xl md:text-2xl text-bark">
-                Kenapa <span className="text-terracotta">BuluBulu.id</span>?
+                Kenapa <span className="text-terracotta">BuluBulu</span>?
               </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -340,7 +340,7 @@ export default async function HomePage() {
         <div className="max-w-2xl mx-auto px-5 flex flex-col items-center gap-2">
           <div className="flex items-center gap-1.5">
             <PawPrint className="h-3.5 w-3.5 text-terracotta/50" />
-            <span className="font-display font-bold text-sm text-bark/40">BuluBulu.id</span>
+            <span className="font-display font-bold text-sm text-bark/40">BuluBulu</span>
           </div>
           <p className="text-xs text-warm-gray/60">
             Sayang Bulu, Sayang Pemiliknya

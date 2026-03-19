@@ -3,7 +3,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: "https://bulubuluid.vercel.app",
+  siteUrl: "https://bulubulu.biz.id",
   generateRobotsTxt: true,
   changefreq: "weekly",
   priority: 0.7,

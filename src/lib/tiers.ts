@@ -1,5 +1,5 @@
 /**
- * Subscription tier system for BuluBulu.id providers.
+ * Subscription tier system for BuluBulu providers.
  *
  * Tiers: basic (free), growth (Rp 75k/mo), business (Rp 150k/mo)
  * Eligibility: Booking features require source === 'organic' OR claim_status === 'approved'

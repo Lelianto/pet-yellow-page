@@ -12,7 +12,7 @@ interface ShareCardProps {
 
 function ShareCardTemplate({ provider, cardRef }: { provider: Provider; cardRef: React.RefObject<HTMLDivElement | null> }) {
   const category = CATEGORIES.find((c) => c.value === provider.category);
-  const providerUrl = `https://bulubuluid.vercel.app/providers/${provider.id}`;
+  const providerUrl = `https://bulubulu.biz.id/providers/${provider.id}`;
   const stars = Math.round(provider.rating);
 
   return (
@@ -44,7 +44,7 @@ function ShareCardTemplate({ provider, cardRef }: { provider: Provider; cardRef:
           <PawPrint style={{ width: 28, height: 28, color: "white" }} />
         </div>
         <span style={{ fontSize: 28, fontWeight: 800, color: "#3D2B1F", letterSpacing: -0.5 }}>
-          BuluBulu.id
+          BuluBulu
         </span>
       </div>
 
@@ -114,7 +114,7 @@ function ShareCardTemplate({ provider, cardRef }: { provider: Provider; cardRef:
             via WhatsApp
           </span>
           <span style={{ fontSize: 16, color: "#8B7E74", marginTop: 8 }}>
-            bulubuluid.vercel.app
+            bulubulu.biz.id
           </span>
         </div>
         <div style={{
@@ -159,8 +159,8 @@ export function ShareButton({ provider }: ShareCardProps) {
         type: "image/png",
       });
 
-      const shareUrl = `https://bulubuluid.vercel.app/providers/${provider.id}`;
-      const shareText = `${provider.name} — layanan ${CATEGORIES.find(c => c.value === provider.category)?.label?.toLowerCase()} terpercaya!\n\nCek di BuluBulu.id:\n${shareUrl}`;
+      const shareUrl = `https://bulubulu.biz.id/providers/${provider.id}`;
+      const shareText = `${provider.name} — layanan ${CATEGORIES.find(c => c.value === provider.category)?.label?.toLowerCase()} terpercaya!\n\nCek di BuluBulu:\n${shareUrl}`;
 
       // Copy text + link to clipboard first, so user can paste it after sharing the image
       try {
@@ -213,8 +213,8 @@ export function ShareButton({ provider }: ShareCardProps) {
   }, [provider, generateImage]);
 
   const handleCopyLink = useCallback(async () => {
-    const shareUrl = `https://bulubuluid.vercel.app/providers/${provider.id}`;
-    const text = `${provider.name} — layanan ${CATEGORIES.find(c => c.value === provider.category)?.label?.toLowerCase()} terpercaya!\n\nCek di BuluBulu.id:\n${shareUrl}`;
+    const shareUrl = `https://bulubulu.biz.id/providers/${provider.id}`;
+    const text = `${provider.name} — layanan ${CATEGORIES.find(c => c.value === provider.category)?.label?.toLowerCase()} terpercaya!\n\nCek di BuluBulu:\n${shareUrl}`;
     try {
       await navigator.clipboard.writeText(text);
       setLinkCopied(true);

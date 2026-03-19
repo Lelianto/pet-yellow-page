@@ -31,14 +31,14 @@ interface ProviderDetailPageProps {
 export async function generateMetadata({ params }: ProviderDetailPageProps): Promise<Metadata> {
   const { id } = await params;
   const provider = await getProvider(id);
-  if (!provider) return { title: "Tidak Ditemukan | BuluBulu.id" };
+  if (!provider) return { title: "Tidak Ditemukan | BuluBulu" };
 
   const category = CATEGORIES.find((c) => c.value === provider.category);
   return {
-    title: `${provider.name} - ${category?.label} | BuluBulu.id`,
+    title: `${provider.name} - ${category?.label} | BuluBulu`,
     description: `${provider.name} — layanan ${category?.label?.toLowerCase()} di ${provider.address}. Hubungi langsung via WhatsApp.`,
     openGraph: {
-      title: `${provider.name} | BuluBulu.id`,
+      title: `${provider.name} | BuluBulu`,
       description: `Layanan ${category?.label?.toLowerCase()} terpercaya. Rating ${provider.rating}/5.`,
     },
   };
