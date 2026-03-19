@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Search, ChevronDown, X, Check } from "lucide-react";
 import { CATEGORIES } from "@/lib/types";
@@ -8,7 +9,7 @@ import { CATEGORIES } from "@/lib/types";
 interface DropdownOption {
   value: string;
   label: string;
-  extra?: string; // secondary text like emoji or count
+  extra?: string;
 }
 
 function SearchableDropdown({
@@ -26,6 +27,8 @@ function SearchableDropdown({
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   const selectedOption = options.find((o) => o.value === value);
 
@@ -44,10 +47,26 @@ function SearchableDropdown({
     [onChange]
   );
 
+  // Position the portal dropdown below the trigger
+  useLayoutEffect(() => {
+    if (open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 6,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  }, [open]);
+
   // Close on outside click
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setOpen(false);
         setQuery("");
       }
@@ -88,6 +107,65 @@ function SearchableDropdown({
       }
     }
   }
+
+  const dropdownContent = open ? (
+    <div
+      ref={dropdownRef}
+      style={{
+        position: "absolute",
+        top: dropdownPos.top,
+        left: dropdownPos.left,
+        width: dropdownPos.width,
+        zIndex: 9999,
+      }}
+      className="bg-white rounded-xl border border-bark/8 shadow-lg shadow-bark/8 overflow-hidden animate-fade-in"
+    >
+      <div className="max-h-56 overflow-y-auto overscroll-contain py-1">
+        {/* "All" option */}
+        <button
+          className={`w-full flex items-center gap-2 px-3.5 py-2 text-sm text-left transition-colors ${
+            !value
+              ? "bg-terracotta/5 text-terracotta font-medium"
+              : "text-bark hover:bg-cream/80"
+          }`}
+          onMouseEnter={() => setHighlightIdx(-1)}
+          onClick={() => handleSelect("")}
+        >
+          <span className="flex-1">{placeholder}</span>
+          {!value && <Check className="h-3.5 w-3.5 text-terracotta" />}
+        </button>
+
+        {filtered.length === 0 && (
+          <div className="px-3.5 py-3 text-sm text-warm-gray/60 text-center">
+            Tidak ditemukan
+          </div>
+        )}
+
+        {filtered.map((option, idx) => (
+          <button
+            key={option.value}
+            className={`w-full flex items-center gap-2 px-3.5 py-2 text-sm text-left transition-colors ${
+              value === option.value
+                ? "bg-terracotta/5 text-terracotta font-medium"
+                : idx === highlightIdx
+                ? "bg-cream/80 text-bark"
+                : "text-bark hover:bg-cream/80"
+            }`}
+            onMouseEnter={() => setHighlightIdx(idx)}
+            onClick={() => handleSelect(option.value)}
+          >
+            {option.extra && (
+              <span className="shrink-0 text-xs">{option.extra}</span>
+            )}
+            <span className="flex-1 truncate">{option.label}</span>
+            {value === option.value && (
+              <Check className="h-3.5 w-3.5 shrink-0 text-terracotta" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div ref={containerRef} className="relative flex-1">
@@ -141,57 +219,8 @@ function SearchableDropdown({
         )}
       </div>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl border border-bark/8 shadow-lg shadow-bark/8 z-50 overflow-hidden animate-fade-in">
-          <div className="max-h-56 overflow-y-auto overscroll-contain py-1">
-            {/* "All" option */}
-            <button
-              className={`w-full flex items-center gap-2 px-3.5 py-2 text-sm text-left transition-colors ${
-                !value
-                  ? "bg-terracotta/5 text-terracotta font-medium"
-                  : highlightIdx === -1
-                  ? ""
-                  : "text-bark hover:bg-cream/80"
-              }`}
-              onMouseEnter={() => setHighlightIdx(-1)}
-              onClick={() => handleSelect("")}
-            >
-              <span className="flex-1">{placeholder}</span>
-              {!value && <Check className="h-3.5 w-3.5 text-terracotta" />}
-            </button>
-
-            {filtered.length === 0 && (
-              <div className="px-3.5 py-3 text-sm text-warm-gray/60 text-center">
-                Tidak ditemukan
-              </div>
-            )}
-
-            {filtered.map((option, idx) => (
-              <button
-                key={option.value}
-                className={`w-full flex items-center gap-2 px-3.5 py-2 text-sm text-left transition-colors ${
-                  value === option.value
-                    ? "bg-terracotta/5 text-terracotta font-medium"
-                    : idx === highlightIdx
-                    ? "bg-cream/80 text-bark"
-                    : "text-bark hover:bg-cream/80"
-                }`}
-                onMouseEnter={() => setHighlightIdx(idx)}
-                onClick={() => handleSelect(option.value)}
-              >
-                {option.extra && (
-                  <span className="shrink-0 text-xs">{option.extra}</span>
-                )}
-                <span className="flex-1 truncate">{option.label}</span>
-                {value === option.value && (
-                  <Check className="h-3.5 w-3.5 shrink-0 text-terracotta" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Portal dropdown so it's never clipped by overflow:hidden ancestors */}
+      {typeof document !== "undefined" && createPortal(dropdownContent, document.body)}
     </div>
   );
 }

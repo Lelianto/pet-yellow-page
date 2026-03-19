@@ -141,14 +141,16 @@ export default async function HomePage() {
       <Header />
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative overflow-hidden">
-          {/* Background layers */}
-          <div className="absolute inset-0 bg-gradient-to-b from-cream-dark via-cream to-cream" />
-          <div className="absolute inset-0 paw-pattern opacity-40" />
-          <div className="absolute top-0 right-0 w-72 h-72 bg-terracotta/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-          <div className="absolute bottom-0 left-0 w-56 h-56 bg-paw-pink/8 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+        <section className="relative">
+          {/* Background layers — wrapped in overflow-hidden so blurs don't leak, but dropdown can escape */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-cream-dark via-cream to-cream" />
+            <div className="absolute inset-0 paw-pattern opacity-40" />
+            <div className="absolute top-0 right-0 w-72 h-72 bg-terracotta/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+            <div className="absolute bottom-0 left-0 w-56 h-56 bg-paw-pink/8 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+          </div>
 
-          <div className="relative z-10 max-w-2xl mx-auto px-5 pt-10 pb-14 md:pt-16 md:pb-20">
+          <div className="relative z-10 max-w-2xl mx-auto px-5 pt-10 pb-20 md:pt-16 md:pb-28">
             <div className="text-center space-y-5">
               {/* Badge */}
               <div className="animate-fade-up inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm border border-terracotta/10 text-bark-light px-4 py-1.5 rounded-full text-sm font-medium shadow-sm">
