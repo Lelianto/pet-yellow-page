@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Providers collection
+    match /providers/{providerId} {
+      // Anyone can read
+      allow read: if true;
+
+      // Authenticated users can create new providers (self-registration)
+      allow create: if request.auth != null;
+
+      // Owner can update their own approved profile
+      // OR any authenticated user can submit a claim (only claim_status + claimant_uid fields)
+      allow update: if request.auth != null && (
+        // Owner editing their own approved profile
+        (resource.data.owner_uid == request.auth.uid && resource.data.claim_status == 'approved')
+        // User submitting a claim on an unclaimed profile
+        || (resource.data.claim_status == 'none'
+            && request.resource.data.claim_status == 'pending'
+            && request.resource.data.claimant_uid == request.auth.uid)
+        // Admin approval (no owner_uid restriction — handled by app logic)
+        // For MVP, allow any authenticated user to update is_verified and claim_status
+        // In production, restrict this to admin UIDs
+      );
+    }
+
+    // Closure reports collection
+    match /closure_reports/{reportId} {
+      // Admin can read
+      allow read: if request.auth != null;
+
+      // Anyone can create a report
+      allow create: if true;
+
+      // Admin can update status (approve/reject)
+      allow update: if request.auth != null;
+
+      // No deletes
+      allow delete: if false;
+    }
+
+    // Recommendations collection
+    match /recommendations/{recId} {
+      // Anyone can read
+      allow read: if true;
+
+      // Anyone can create a recommendation
+      allow create: if true;
+
+      // No updates or deletes from client
+      allow update, delete: if false;
+    }
+  }
+}

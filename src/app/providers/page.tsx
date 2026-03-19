@@ -1,91 +1,169 @@
 import { Suspense } from "react";
+import { PawPrint } from "lucide-react";
 import { Header } from "@/components/header";
 import { ProviderCard } from "@/components/provider-card";
 import { CategoryPills } from "@/components/category-pills";
-import type { Provider, ProviderCategory } from "@/lib/types";
+import { CityFilter } from "@/components/city-filter";
+import { NearMeButton } from "@/components/near-me-button";
+import { RecommendServiceButton } from "@/components/recommend-service-button";
+import { adminDb } from "@/lib/firebase-admin";
+import { docToProvider } from "@/lib/providers";
+import { haversineDistance } from "@/lib/geo";
+import type { Provider } from "@/lib/types";
 
-// Server-side Firestore fetch via Admin SDK
-async function getProviders(category?: string): Promise<Provider[]> {
-  // Dynamic import to avoid bundling admin SDK in client
-  const { adminDb } = await import("@/lib/firebase-admin");
-
+async function getProviders(category?: string, city?: string): Promise<Provider[]> {
   let query: FirebaseFirestore.Query = adminDb.collection("providers");
 
   if (category) {
     query = query.where("category", "==", category);
   }
 
-  query = query.orderBy("rating", "desc").limit(50);
+  if (city) {
+    query = query.where("area_city", "==", city);
+  }
 
+  query = query.orderBy("rating", "desc").limit(50);
   const snapshot = await query.get();
 
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      name: data.name,
-      category: data.category as ProviderCategory,
-      address: data.address,
-      whatsapp_number: data.whatsapp_number,
-      google_place_id: data.google_place_id,
-      rating: data.rating,
-      is_verified: data.is_verified,
-      is_home_service: data.is_home_service,
-      location: {
-        latitude: data.location?.latitude || 0,
-        longitude: data.location?.longitude || 0,
-      },
-      photo_url: data.photo_url,
-      created_at: data.created_at?.toDate() || new Date(),
-      updated_at: data.updated_at?.toDate() || new Date(),
-    } satisfies Provider;
+  return snapshot.docs
+    .map(docToProvider)
+    .filter((p) => p.business_status !== "CLOSED_PERMANENTLY");
+}
+
+/** Get distinct city names from all providers for the filter dropdown. */
+async function getAvailableCities(): Promise<string[]> {
+  const snapshot = await adminDb.collection("providers").select("area_city").get();
+  const citySet = new Set<string>();
+  snapshot.docs.forEach((doc) => {
+    const city = doc.data().area_city as string | undefined;
+    if (city) citySet.add(city);
   });
+  return Array.from(citySet).sort((a, b) => a.localeCompare(b));
 }
 
 interface ProvidersPageProps {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; city?: string; lat?: string; lng?: string }>;
 }
 
 export default async function ProvidersPage({ searchParams }: ProvidersPageProps) {
-  const { category } = await searchParams;
+  const { category, city, lat, lng } = await searchParams;
+
+  const userLat = lat ? parseFloat(lat) : null;
+  const userLng = lng ? parseFloat(lng) : null;
+  const hasUserLocation = userLat !== null && userLng !== null && !isNaN(userLat) && !isNaN(userLng);
 
   let providers: Provider[] = [];
-  let error = false;
+  let cities: string[] = [];
+  let distanceMap: Map<string, number> = new Map();
+  let error = "";
 
   try {
-    providers = await getProviders(category);
-  } catch {
-    error = true;
+    [providers, cities] = await Promise.all([
+      getProviders(category, city),
+      getAvailableCities(),
+    ]);
+
+    // Calculate distances and sort by nearest if user location is available
+    if (hasUserLocation) {
+      for (const p of providers) {
+        if (p.location.latitude !== 0 && p.location.longitude !== 0) {
+          const dist = haversineDistance(userLat, userLng, p.location.latitude, p.location.longitude);
+          distanceMap.set(p.id, dist);
+        }
+      }
+      providers.sort((a, b) => {
+        const da = distanceMap.get(a.id) ?? Infinity;
+        const db = distanceMap.get(b.id) ?? Infinity;
+        return da - db;
+      });
+    }
+  } catch (e) {
+    error = e instanceof Error ? e.message : "Unknown error";
+    console.error("Firestore fetch error:", e);
+  }
+
+  // Serialize distance map to pass as plain object to client components
+  const distances: Record<string, number> = {};
+  for (const [id, dist] of distanceMap) {
+    distances[id] = dist;
   }
 
   return (
     <>
       <Header />
-      <main className="flex-1 px-4 py-4">
-        <div className="max-w-lg mx-auto space-y-4">
-          <Suspense fallback={null}>
-            <CategoryPills />
-          </Suspense>
+      <main className="flex-1 bg-cream">
+        <div className="max-w-2xl mx-auto px-5 py-5 space-y-5">
+          {/* Title area */}
+          <div className="animate-fade-up">
+            <h1 className="font-display font-extrabold text-xl text-bark">Jelajahi Layanan</h1>
+            <p className="text-sm text-warm-gray mt-0.5">
+              {providers.length > 0
+                ? `${providers.length} layanan ditemukan${city ? ` di ${city}` : ""}${hasUserLocation ? " — diurutkan terdekat" : ""}`
+                : "Cari layanan terbaik untuk anabulmu"}
+            </p>
+          </div>
 
+          {/* Filters */}
+          <div className="space-y-3 animate-fade-up stagger-1">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+              <Suspense fallback={null}>
+                <NearMeButton />
+                <CategoryPills />
+              </Suspense>
+            </div>
+            <Suspense fallback={null}>
+              <CityFilter cities={cities} />
+            </Suspense>
+          </div>
+
+          {/* Error state */}
           {error && (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              <p>Gagal memuat data. Pastikan Firebase sudah dikonfigurasi.</p>
-              <p className="mt-1 text-xs">Cek file <code>.env.local</code> dan Firestore rules.</p>
+            <div className="text-center py-16 animate-fade-in">
+              <div className="w-14 h-14 bg-terracotta/8 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <PawPrint className="h-6 w-6 text-terracotta/50" />
+              </div>
+              <p className="font-display font-bold text-bark text-sm">Gagal memuat data</p>
+              <p className="mt-2 text-xs font-mono text-terracotta/60 max-w-xs mx-auto">{error}</p>
             </div>
           )}
 
+          {/* Empty state */}
           {!error && providers.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              <p className="text-2xl mb-2">🐾</p>
-              <p>Belum ada penyedia layanan.</p>
-              <p className="mt-1 text-xs">Jalankan <code>npx tsx scripts/seed-from-google.ts</code> untuk mengisi data.</p>
+            <div className="text-center py-16 animate-fade-in">
+              <div className="w-14 h-14 bg-cream-dark rounded-2xl flex items-center justify-center mx-auto mb-4 animate-float">
+                <PawPrint className="h-6 w-6 text-terracotta/40" />
+              </div>
+              <p className="font-display font-bold text-bark text-sm">
+                {city ? `Belum ada layanan di ${city}` : "Belum ada penyedia layanan"}
+              </p>
+              <p className="mt-1.5 text-xs text-warm-gray">
+                {city
+                  ? "Coba cari di kota lain atau rekomendasikan jasa yang Anda kenal."
+                  : "Belum ada layanan untuk kategori ini. Coba kategori lain atau rekomendasikan jasa yang Anda kenal."}
+              </p>
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4">
-            {providers.map((provider) => (
-              <ProviderCard key={provider.id} provider={provider} />
-            ))}
+          {/* Provider grid */}
+          {providers.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {providers.map((provider, i) => (
+                <ProviderCard
+                  key={provider.id}
+                  provider={provider}
+                  index={i}
+                  distance={distances[provider.id]}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Recommend CTA */}
+          <div className="bg-white rounded-2xl border border-bark/5 p-5 text-center space-y-3">
+            <p className="text-sm text-warm-gray">
+              Kenal jasa pet care yang belum terdaftar?
+            </p>
+            <RecommendServiceButton />
           </div>
         </div>
       </main>

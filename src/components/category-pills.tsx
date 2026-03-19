@@ -4,6 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, type ProviderCategory } from "@/lib/types";
 
+const PILL_BASE = "shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border";
+const PILL_ACTIVE = "bg-gradient-to-r from-terracotta to-terracotta-light text-white border-transparent shadow-sm shadow-terracotta/20";
+const PILL_INACTIVE = "bg-white text-bark-light border-bark/8 hover:border-terracotta/20 hover:text-terracotta";
+
+function pillCn(isActive: boolean) {
+  return cn(PILL_BASE, isActive ? PILL_ACTIVE : PILL_INACTIVE);
+}
+
 export function CategoryPills() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,32 +28,19 @@ export function CategoryPills() {
   }
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-      <button
-        onClick={() => handleClick(null)}
-        className={cn(
-          "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
-          !active
-            ? "bg-amber-500 text-white shadow-sm"
-            : "bg-amber-50 text-amber-700 hover:bg-amber-100"
-        )}
-      >
+    <>
+      <button onClick={() => handleClick(null)} className={pillCn(!active)}>
         Semua
       </button>
       {CATEGORIES.map((cat) => (
         <button
           key={cat.value}
           onClick={() => handleClick(cat.value)}
-          className={cn(
-            "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
-            active === cat.value
-              ? "bg-amber-500 text-white shadow-sm"
-              : "bg-amber-50 text-amber-700 hover:bg-amber-100"
-          )}
+          className={pillCn(active === cat.value)}
         >
           {cat.emoji} {cat.label}
         </button>
       ))}
-    </div>
+    </>
   );
 }
