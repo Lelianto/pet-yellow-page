@@ -59,10 +59,6 @@ export function LocalBusinessJsonLd({ provider }: { provider: Provider }) {
     data.sameAs = [provider.website];
   }
 
-  if (provider.photo_url) {
-    data.image = provider.photo_url;
-  }
-
   if (provider.opening_hours_text && provider.opening_hours_text.length > 0) {
     data.openingHoursSpecification = provider.opening_hours_text;
   }

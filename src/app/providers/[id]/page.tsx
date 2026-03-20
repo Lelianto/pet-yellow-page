@@ -2,7 +2,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, CheckCircle, MapPin, PawPrint, ExternalLink, Clock, Globe, Truck, Star, Wrench } from "lucide-react";
+import { ArrowLeft, MapPin, ExternalLink, Clock, Globe, Truck, Star, Wrench } from "lucide-react";
 import { Header } from "@/components/header";
 import { ProviderTags } from "@/components/provider-tags";
 import { ServiceChips } from "@/components/service-chips";
@@ -56,22 +56,21 @@ export default async function ProviderDetailPage({ params }: ProviderDetailPageP
       <LocalBusinessJsonLd provider={provider} />
       <Header />
       <main className="flex-1 bg-cream">
-        {/* Photo */}
+        {/* Compact hero banner */}
         <div className="max-w-2xl mx-auto">
-          {provider.photo_url ? (
-            <div className="aspect-[16/9] bg-cream-dark overflow-hidden animate-fade-in">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={provider.photo_url}
-                alt={provider.name}
-                className="w-full h-full object-cover"
-              />
+          <div className="bg-gradient-to-br from-terracotta/10 via-paw-pink-light/30 to-cream-dark px-5 py-6 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 w-14 h-14 rounded-2xl bg-white/70 backdrop-blur-sm flex items-center justify-center text-3xl shadow-sm">
+                {CATEGORIES.find((c) => c.value === provider.category)?.emoji || "🐾"}
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-terracotta/70 uppercase tracking-wide">
+                  {CATEGORIES.find((c) => c.value === provider.category)?.label}
+                </p>
+                <h1 className="font-display font-extrabold text-xl text-bark leading-tight line-clamp-2">{provider.name}</h1>
+              </div>
             </div>
-          ) : (
-            <div className="aspect-[16/9] bg-gradient-to-br from-cream-dark to-paw-pink-light/30 flex items-center justify-center animate-fade-in">
-              <PawPrint className="h-20 w-20 text-terracotta/15 animate-float" />
-            </div>
-          )}
+          </div>
         </div>
 
         <div className="max-w-2xl mx-auto px-5 py-6 space-y-6">
@@ -86,17 +85,8 @@ export default async function ProviderDetailPage({ params }: ProviderDetailPageP
 
           {/* Title card */}
           <div className="animate-fade-up stagger-1 bg-white rounded-2xl border border-bark/5 p-5 space-y-4">
-            {/* Name & verified */}
+            {/* Tags & description */}
             <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                <h1 className="font-display font-extrabold text-2xl text-bark leading-tight">{provider.name}</h1>
-                {provider.is_verified && (
-                  <div className="shrink-0 mt-1 bg-sky-soft/15 p-1 rounded-full">
-                    <CheckCircle className="h-4 w-4 text-sky-soft" />
-                  </div>
-                )}
-              </div>
-
               <ProviderTags provider={provider} />
 
               {provider.description && (

@@ -21,28 +21,14 @@ export function ProviderCard({ provider, index = 0, distance }: ProviderCardProp
     <article
       className={`animate-fade-up stagger-${Math.min(index + 1, MAX_STAGGER)} group bg-white rounded-2xl border border-bark/5 overflow-hidden card-lift`}
     >
-      <Link href={`/providers/${provider.id}`} className="block">
-        {provider.photo_url ? (
-          <div className="aspect-[16/10] bg-cream-dark overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={provider.photo_url}
-              alt={provider.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          </div>
-        ) : (
-          <div className="aspect-[16/10] bg-gradient-to-br from-cream-dark to-paw-pink-light/30 flex items-center justify-center">
-            <span className="text-5xl opacity-50 group-hover:opacity-70 transition-opacity">{category?.emoji || "🐾"}</span>
-          </div>
-        )}
-      </Link>
-
       <div className="p-4 space-y-3">
-        {/* Header */}
+        {/* Compact header with category badge */}
         <div className="space-y-1.5">
-          <Link href={`/providers/${provider.id}`} className="group/title">
-            <h3 className="font-display font-bold text-bark leading-snug line-clamp-1 group-hover/title:text-terracotta transition-colors">
+          <Link href={`/providers/${provider.id}`} className="group/title flex items-center gap-2.5">
+            <span className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-terracotta/10 to-paw-pink-light/40 flex items-center justify-center text-lg">
+              {category?.emoji || "🐾"}
+            </span>
+            <h3 className="font-display font-bold text-bark leading-snug line-clamp-2 group-hover/title:text-terracotta transition-colors">
               {provider.name}
             </h3>
           </Link>
