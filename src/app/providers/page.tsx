@@ -47,13 +47,17 @@ async function getAllCities(): Promise<CityOption[]> {
   try {
     const { readHomepageCache } = await import("@/lib/homepage-cache");
     const cache = await readHomepageCache();
-    if (cache?.topCities) {
-      // Cache has top cities with counts, and full city list
-      // Build count map from topCities + fill rest with count 1
+    if (cache?.cityCounts) {
+      // Use full city counts from cache
+      for (const [name, count] of Object.entries(cache.cityCounts)) {
+        cityCount.set(name, count);
+      }
+      usedCache = true;
+    } else if (cache?.topCities) {
+      // Fallback: old cache format without cityCounts
       for (const tc of cache.topCities) {
         cityCount.set(tc.name, tc.count);
       }
-      // For cities not in topCities, set count to 1 (they have providers)
       for (const city of cache.cities) {
         if (!cityCount.has(city)) cityCount.set(city, 1);
       }

@@ -5,6 +5,7 @@ import type { AggregateStats, CityWithCount, TopReview } from "@/lib/providers";
 /** Shape of the cached homepage document stored in meta/homepage. */
 export interface HomepageCache {
   cities: string[];
+  cityCounts: Record<string, number>;
   stats: AggregateStats;
   topCities: CityWithCount[];
   topReviews: TopReview[];
@@ -102,8 +103,15 @@ export async function writeHomepageCache(): Promise<HomepageCache> {
   allReviews.sort(() => Math.random() - 0.5);
   const topReviews = allReviews.slice(0, 8);
 
+  // Build full city counts map
+  const cityCounts: Record<string, number> = {};
+  for (const [name, count] of cityCount) {
+    cityCounts[name] = count;
+  }
+
   const cache: HomepageCache = {
     cities,
+    cityCounts,
     stats,
     topCities,
     topReviews,
