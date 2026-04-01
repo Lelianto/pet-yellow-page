@@ -12,6 +12,9 @@ import {
   AlertTriangle,
   LayoutDashboard,
   ChevronRight,
+  Users,
+  CheckCircle,
+  TrendingUp,
 } from "lucide-react";
 import { collection, query, where, getDocs, getCountFromServer } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -22,6 +25,7 @@ import {
   isPremiumActive,
   canUseBooking,
   canUsePayments,
+  canUseCRM,
   type ProviderTier,
 } from "@/lib/tiers";
 
@@ -40,6 +44,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [bookingCount, setBookingCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [totalBookings, setTotalBookings] = useState(0);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -71,15 +77,30 @@ export default function DashboardPage() {
           trial_used: (data.trial_used as boolean) || false,
         });
 
-        // Count pending bookings
+        // Count bookings by status
         try {
-          const bq = query(
+          const bqPending = query(
             collection(db, "bookings"),
             where("provider_id", "==", doc.id),
             where("status", "in", ["pending", "waiting_payment", "waiting_payment_verification"])
           );
-          const bSnap = await getCountFromServer(bq);
-          setBookingCount(bSnap.data().count);
+          const bqCompleted = query(
+            collection(db, "bookings"),
+            where("provider_id", "==", doc.id),
+            where("status", "==", "completed")
+          );
+          const bqAll = query(
+            collection(db, "bookings"),
+            where("provider_id", "==", doc.id)
+          );
+          const [pendingSnap, completedSnap, allSnap] = await Promise.all([
+            getCountFromServer(bqPending),
+            getCountFromServer(bqCompleted),
+            getCountFromServer(bqAll),
+          ]);
+          setBookingCount(pendingSnap.data().count);
+          setCompletedCount(completedSnap.data().count);
+          setTotalBookings(allSnap.data().count);
         } catch {
           // Index mungkin belum ada, abaikan
         }
@@ -136,6 +157,7 @@ export default function DashboardPage() {
   const isTrialing = premiumActive && provider?.trial_used && provider.tier !== "basic";
   const hasBooking = canUseBooking(provider?.tier || "basic", provider?.is_premium || false);
   const hasPayments = canUsePayments(provider?.tier || "basic", provider?.is_premium || false);
+  const hasCRM = canUseCRM(provider?.tier || "basic", provider?.is_premium || false);
 
   const MENU_ITEMS = [
     {
@@ -164,6 +186,15 @@ export default function DashboardPage() {
       desc: hasPayments ? "Atur rekening & DP untuk pelanggan" : "Tersedia di paket Business",
       color: "text-amber-600",
       bg: "bg-amber-100",
+      show: true,
+    },
+    {
+      href: "/dashboard/crm",
+      icon: Users,
+      label: "Pet CRM",
+      desc: hasCRM ? "Data pelanggan & riwayat kunjungan" : "Tersedia di paket Business",
+      color: "text-paw-pink",
+      bg: "bg-paw-pink-light",
       show: true,
     },
     {
@@ -220,6 +251,33 @@ export default function DashboardPage() {
           {premiumActive ? "Detail" : "Upgrade"}
         </Link>
       </div>
+
+      {/* Stats cards */}
+      {totalBookings > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-xl border border-bark/5 p-3 text-center">
+            <div className="w-8 h-8 rounded-lg bg-sky-soft/15 flex items-center justify-center mx-auto mb-1.5">
+              <TrendingUp className="h-4 w-4 text-sky-soft" />
+            </div>
+            <p className="font-display font-extrabold text-lg text-bark">{totalBookings}</p>
+            <p className="text-[10px] text-warm-gray">Total Booking</p>
+          </div>
+          <div className="bg-white rounded-xl border border-bark/5 p-3 text-center">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center mx-auto mb-1.5">
+              <Users className="h-4 w-4 text-amber-600" />
+            </div>
+            <p className="font-display font-extrabold text-lg text-bark">{bookingCount}</p>
+            <p className="text-[10px] text-warm-gray">Menunggu</p>
+          </div>
+          <div className="bg-white rounded-xl border border-bark/5 p-3 text-center">
+            <div className="w-8 h-8 rounded-lg bg-sage/15 flex items-center justify-center mx-auto mb-1.5">
+              <CheckCircle className="h-4 w-4 text-sage" />
+            </div>
+            <p className="font-display font-extrabold text-lg text-bark">{completedCount}</p>
+            <p className="text-[10px] text-warm-gray">Selesai</p>
+          </div>
+        </div>
+      )}
 
       {/* Menu grid */}
       <div className="space-y-2">

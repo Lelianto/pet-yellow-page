@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Loader2, CheckCircle, CreditCard, MessageCircle } from "lucide-react";
+import Image from "next/image";
+import { CalendarDays, Loader2, CheckCircle, CreditCard, MessageCircle, QrCode } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
@@ -147,51 +148,13 @@ export function BookingForm({
         </div>
 
         {requiresPayment ? (
-          <>
-            {/* Payment instructions */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-amber-600" />
-                <span className="text-sm font-semibold text-amber-800">Langkah Selanjutnya</span>
-              </div>
-              <div className="text-xs text-amber-700 space-y-2">
-                <p>1. Transfer <span className="font-bold">tepat</span> sebesar:</p>
-                {/* Exact transfer amount with unique code highlighted */}
-                <div className="bg-white rounded-lg p-3 text-center">
-                  <p className="text-xs text-warm-gray mb-1">Total Transfer</p>
-                  <p className="font-mono font-extrabold text-xl text-bark">
-                    Rp {dpTotal.toLocaleString("id-ID")}
-                  </p>
-                  <p className="text-[10px] text-amber-600 mt-1">
-                    DP Rp {paymentSettings!.min_dp_amount.toLocaleString("id-ID")} + kode unik Rp {uniqueCode}
-                  </p>
-                </div>
-                <p className="text-[10px] text-amber-600/80 text-center">
-                  Mohon transfer tepat sampai 3 digit terakhir agar pesanan terverifikasi oleh penyedia jasa.
-                </p>
-
-                <p>2. Transfer ke:</p>
-                <div className="bg-white rounded-lg p-3 space-y-1">
-                  <p><span className="text-warm-gray">Bank:</span> <span className="font-semibold text-bark">{paymentSettings!.bank_name}</span></p>
-                  <p><span className="text-warm-gray">No. Rek:</span> <span className="font-semibold text-bark font-mono">{paymentSettings!.account_number}</span></p>
-                  <p><span className="text-warm-gray">A/N:</span> <span className="font-semibold text-bark">{paymentSettings!.account_holder}</span></p>
-                </div>
-
-                <p>3. Kirim bukti transfer via WhatsApp dengan kode booking <span className="font-bold">{bookingCode}</span></p>
-              </div>
-            </div>
-
-            {/* WA button to send proof */}
-            <a
-              href={buildWhatsAppPaymentUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl font-semibold h-11 px-5 bg-wa-green text-white hover:bg-wa-green/90 transition-colors"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Kirim Bukti Transfer via WhatsApp
-            </a>
-          </>
+          <BookingPaymentInstructions
+            dpTotal={dpTotal}
+            uniqueCode={uniqueCode}
+            bookingCode={bookingCode}
+            paymentSettings={paymentSettings!}
+            whatsAppUrl={buildWhatsAppPaymentUrl()}
+          />
         ) : (
           <p className="text-xs text-warm-gray text-center">
             Menunggu konfirmasi dari penyedia layanan. Simpan kode booking Anda.
@@ -332,5 +295,186 @@ export function BookingForm({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+// ── Payment Instructions with QRIS + Bank Transfer tabs ──────────────
+
+function BookingPaymentInstructions({
+  dpTotal,
+  uniqueCode,
+  bookingCode,
+  paymentSettings,
+  whatsAppUrl,
+}: {
+  dpTotal: number;
+  uniqueCode: number;
+  bookingCode: string;
+  paymentSettings: PaymentSettings;
+  whatsAppUrl: string;
+}) {
+  const [payMethod, setPayMethod] = useState<"qris" | "bank">(
+    paymentSettings.qris_url ? "qris" : "bank"
+  );
+
+  return (
+    <>
+      {/* Payment instructions */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-amber-600" />
+          <span className="text-sm font-semibold text-amber-800">
+            Langkah Selanjutnya
+          </span>
+        </div>
+
+        {/* Amount */}
+        <div className="text-xs text-amber-700 space-y-2">
+          <p>
+            1. Transfer <span className="font-bold">tepat</span> sebesar:
+          </p>
+          <div className="bg-white rounded-lg p-3 text-center">
+            <p className="text-xs text-warm-gray mb-1">Total Transfer</p>
+            <p className="font-mono font-extrabold text-xl text-bark">
+              Rp {dpTotal.toLocaleString("id-ID")}
+            </p>
+            <p className="text-[10px] text-amber-600 mt-1">
+              DP Rp {paymentSettings.min_dp_amount.toLocaleString("id-ID")} +
+              kode unik Rp {uniqueCode}
+            </p>
+          </div>
+          <p className="text-[10px] text-amber-600/80 text-center">
+            Mohon transfer tepat sampai 3 digit terakhir agar pesanan
+            terverifikasi oleh penyedia jasa.
+          </p>
+        </div>
+
+        {/* Payment method tabs */}
+        {paymentSettings.qris_url && (
+          <div className="flex gap-1 bg-amber-100/50 rounded-lg p-1">
+            <button
+              onClick={() => setPayMethod("qris")}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-md transition-all ${
+                payMethod === "qris"
+                  ? "bg-white text-amber-800 shadow-sm"
+                  : "text-amber-600 hover:text-amber-700"
+              }`}
+            >
+              <QrCode className="h-3.5 w-3.5" />
+              QRIS
+            </button>
+            <button
+              onClick={() => setPayMethod("bank")}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-md transition-all ${
+                payMethod === "bank"
+                  ? "bg-white text-amber-800 shadow-sm"
+                  : "text-amber-600 hover:text-amber-700"
+              }`}
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              Transfer Bank
+            </button>
+          </div>
+        )}
+
+        {/* QRIS */}
+        {payMethod === "qris" && paymentSettings.qris_url && (
+          <div className="text-xs text-amber-700 space-y-2">
+            <p>2. Scan QRIS di bawah:</p>
+            <div className="bg-white rounded-lg p-3">
+              <div className="relative w-full aspect-square max-w-[220px] mx-auto rounded-md overflow-hidden">
+                <Image
+                  src={paymentSettings.qris_url}
+                  alt="QRIS Payment"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <p className="text-[10px] text-amber-600/80 text-center mt-2">
+                Scan menggunakan GoPay, OVO, Dana, ShopeePay, atau mobile
+                banking
+              </p>
+            </div>
+            <p>
+              3. Kirim bukti via WhatsApp dengan kode booking{" "}
+              <span className="font-bold">{bookingCode}</span>
+            </p>
+          </div>
+        )}
+
+        {/* Bank Transfer */}
+        {payMethod === "bank" && (
+          <div className="text-xs text-amber-700 space-y-2">
+            <p>2. Transfer ke:</p>
+            <div className="bg-white rounded-lg p-3 space-y-1">
+              <p>
+                <span className="text-warm-gray">Bank:</span>{" "}
+                <span className="font-semibold text-bark">
+                  {paymentSettings.bank_name}
+                </span>
+              </p>
+              <p>
+                <span className="text-warm-gray">No. Rek:</span>{" "}
+                <span className="font-semibold text-bark font-mono">
+                  {paymentSettings.account_number}
+                </span>
+              </p>
+              <p>
+                <span className="text-warm-gray">A/N:</span>{" "}
+                <span className="font-semibold text-bark">
+                  {paymentSettings.account_holder}
+                </span>
+              </p>
+            </div>
+            <p>
+              3. Kirim bukti transfer via WhatsApp dengan kode booking{" "}
+              <span className="font-bold">{bookingCode}</span>
+            </p>
+          </div>
+        )}
+
+        {/* If no QRIS, show bank only */}
+        {!paymentSettings.qris_url && (
+          <div className="text-xs text-amber-700 space-y-2">
+            <p>2. Transfer ke:</p>
+            <div className="bg-white rounded-lg p-3 space-y-1">
+              <p>
+                <span className="text-warm-gray">Bank:</span>{" "}
+                <span className="font-semibold text-bark">
+                  {paymentSettings.bank_name}
+                </span>
+              </p>
+              <p>
+                <span className="text-warm-gray">No. Rek:</span>{" "}
+                <span className="font-semibold text-bark font-mono">
+                  {paymentSettings.account_number}
+                </span>
+              </p>
+              <p>
+                <span className="text-warm-gray">A/N:</span>{" "}
+                <span className="font-semibold text-bark">
+                  {paymentSettings.account_holder}
+                </span>
+              </p>
+            </div>
+            <p>
+              3. Kirim bukti transfer via WhatsApp dengan kode booking{" "}
+              <span className="font-bold">{bookingCode}</span>
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* WA button to send proof */}
+      <a
+        href={whatsAppUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full inline-flex items-center justify-center gap-2 rounded-xl font-semibold h-11 px-5 bg-wa-green text-white hover:bg-wa-green/90 transition-colors"
+      >
+        <MessageCircle className="h-4 w-4" />
+        Kirim Bukti Transfer via WhatsApp
+      </a>
+    </>
   );
 }

@@ -106,6 +106,33 @@ export interface PaymentSettings {
   account_holder: string;
   min_dp_amount: number; // minimum DP in IDR
   whatsapp_payment: string; // WA number to receive payment proofs
+  qris_url?: string; // QRIS image URL for payment
+}
+
+// ── Subscription Order types ─────────────────────────────────────────
+
+export type SubscriptionOrderStatus =
+  | "pending"           // waiting payment
+  | "waiting_verification" // customer claims paid, admin verifying
+  | "active"            // payment verified, subscription active
+  | "expired"           // subscription expired
+  | "rejected";         // admin rejected
+
+export interface SubscriptionOrder {
+  id: string;
+  provider_id: string;
+  provider_name: string;
+  customer_uid: string;
+  tier: "growth" | "business";
+  amount: number; // IDR
+  unique_code: number; // 1-999 for verification
+  total: number; // amount + unique_code
+  status: SubscriptionOrderStatus;
+  order_code: string; // e.g. "SUB-A1B2C3"
+  duration_days: number; // 30 for monthly
+  payment_confirmed_at?: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export type BookingStatus =

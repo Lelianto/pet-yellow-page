@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Crown, Clock, AlertTriangle, Loader2 } from "lucide-react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { PricingTable } from "@/components/pricing-table";
+import { SubscriptionPaymentSheet } from "@/components/subscription-payment-sheet";
 import {
   TIER_DEFS,
   TRIAL_DAYS,
@@ -14,6 +15,7 @@ import {
   isPremiumActive,
   type ProviderTier,
 } from "@/lib/tiers";
+import type { SubscriptionOrderStatus } from "@/lib/types";
 
 interface ProviderBilling {
   id: string;
@@ -24,11 +26,21 @@ interface ProviderBilling {
   trial_used: boolean;
 }
 
+interface RecentOrder {
+  order_code: string;
+  tier: ProviderTier;
+  total: number;
+  status: SubscriptionOrderStatus;
+  created_at: Date;
+}
+
 export default function BillingPage() {
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const [provider, setProvider] = useState<ProviderBilling | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [selectedTier, setSelectedTier] = useState<ProviderTier | null>(null);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -59,6 +71,31 @@ export default function BillingPage() {
           premium_until: data.premium_until?.toDate() || null,
           trial_used: (data.trial_used as boolean) || false,
         });
+
+        // Fetch recent subscription orders
+        try {
+          const oq = query(
+            collection(db, "subscription_orders"),
+            where("provider_id", "==", doc.id),
+            orderBy("created_at", "desc"),
+            limit(3)
+          );
+          const oSnap = await getDocs(oq);
+          setRecentOrders(
+            oSnap.docs.map((d) => {
+              const od = d.data();
+              return {
+                order_code: od.order_code as string,
+                tier: od.tier as ProviderTier,
+                total: od.total as number,
+                status: od.status as SubscriptionOrderStatus,
+                created_at: od.created_at?.toDate() || new Date(),
+              };
+            })
+          );
+        } catch {
+          // Index mungkin belum ada
+        }
       } catch (err) {
         console.error("Failed to fetch provider:", err);
       }
@@ -131,9 +168,16 @@ export default function BillingPage() {
 
   function handleSelectTier(tier: ProviderTier) {
     if (tier === "basic") return;
-    // Placeholder — payment gateway integration
-    alert(`Fitur pembayaran untuk paket ${TIER_DEFS[tier].name} akan segera hadir. Hubungi admin untuk upgrade manual.`);
+    setSelectedTier(tier);
   }
+
+  const ORDER_STATUS_LABELS: Record<SubscriptionOrderStatus, { label: string; color: string }> = {
+    pending: { label: "Menunggu Bayar", color: "bg-amber-100 text-amber-700" },
+    waiting_verification: { label: "Menunggu Verifikasi", color: "bg-blue-100 text-blue-700" },
+    active: { label: "Aktif", color: "bg-sage/15 text-sage" },
+    expired: { label: "Kadaluarsa", color: "bg-bark/10 text-bark-light" },
+    rejected: { label: "Ditolak", color: "bg-red-100 text-red-600" },
+  };
 
   return (
     <div className="space-y-6">
@@ -210,6 +254,37 @@ export default function BillingPage() {
         )}
       </div>
 
+      {/* Recent orders */}
+      {recentOrders.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-display font-bold text-sm text-bark">Riwayat Pesanan</h2>
+          <div className="space-y-2">
+            {recentOrders.map((order) => {
+              const statusDef = ORDER_STATUS_LABELS[order.status];
+              return (
+                <div
+                  key={order.order_code}
+                  className="bg-white rounded-xl border border-bark/5 p-3 flex items-center justify-between"
+                >
+                  <div>
+                    <p className="font-mono text-xs font-bold text-bark">{order.order_code}</p>
+                    <p className="text-[10px] text-warm-gray">
+                      {TIER_DEFS[order.tier].name} — Rp {order.total.toLocaleString("id-ID")}
+                    </p>
+                    <p className="text-[10px] text-warm-gray">
+                      {order.created_at.toLocaleDateString("id-ID")}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusDef.color}`}>
+                    {statusDef.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Pricing table */}
       <div className="space-y-4">
         <h2 className="font-display font-extrabold text-lg text-bark text-center">Pilih Paket</h2>
@@ -219,6 +294,19 @@ export default function BillingPage() {
           onSelect={handleSelectTier}
         />
       </div>
+
+      {/* Subscription payment sheet */}
+      {provider && selectedTier && selectedTier !== "basic" && (
+        <SubscriptionPaymentSheet
+          tier={selectedTier}
+          providerId={provider.id}
+          providerName={provider.name}
+          open={!!selectedTier}
+          onOpenChange={(open) => {
+            if (!open) setSelectedTier(null);
+          }}
+        />
+      )}
     </div>
   );
 }

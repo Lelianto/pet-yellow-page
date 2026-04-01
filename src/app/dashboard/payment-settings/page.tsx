@@ -31,6 +31,7 @@ export default function PaymentSettingsPage() {
   const [accountHolder, setAccountHolder] = useState("");
   const [minDp, setMinDp] = useState("20000");
   const [whatsappPayment, setWhatsappPayment] = useState("");
+  const [qrisUrl, setQrisUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -65,6 +66,7 @@ export default function PaymentSettingsPage() {
             setAccountHolder(ps.account_holder || "");
             setMinDp(String(ps.min_dp_amount || 20000));
             setWhatsappPayment(ps.whatsapp_payment || "");
+            setQrisUrl(ps.qris_url || "");
           }
         }
       } catch (err) {
@@ -88,6 +90,7 @@ export default function PaymentSettingsPage() {
         account_holder: accountHolder,
         min_dp_amount: parseInt(minDp) || 20000,
         whatsapp_payment: whatsappPayment || provider.whatsapp_number,
+        qris_url: qrisUrl || undefined,
       };
 
       await updateDoc(doc(db, "providers", provider.id), {
@@ -213,6 +216,20 @@ export default function PaymentSettingsPage() {
             min={0}
           />
           <p className="text-xs text-warm-gray">Jumlah minimum DP yang harus dibayar pelanggan.</p>
+        </div>
+
+        {/* QRIS URL */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-semibold text-bark">URL Gambar QRIS (opsional)</label>
+          <Input
+            placeholder="https://example.com/qris.jpg"
+            value={qrisUrl}
+            onChange={(e) => setQrisUrl(e.target.value)}
+            className="rounded-lg h-10"
+          />
+          <p className="text-xs text-warm-gray">
+            Upload gambar QRIS ke hosting gambar lalu paste URL-nya. Pelanggan bisa scan QRIS sebagai alternatif transfer bank.
+          </p>
         </div>
 
         {/* WhatsApp for payment proofs */}
